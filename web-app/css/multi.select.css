@@ -1,0 +1,32 @@
+.selected-items {
+}
+
+.selected-items ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    clear:both;
+}
+
+.selected-items ul li {
+    font-weight: bold;
+    padding: 0 20px 0px 0px;
+    margin: 1px 0;
+    font-size: 11px;
+
+    text-align: right;
+    position: relative;
+}
+
+.selected-items ul li a {
+    text-decoration: none;
+    color: #303030;
+    display: block;
+    position: absolute;
+    right:3px;
+    top:2px;
+}
+
+.selected-items ul li a:hover {
+    color: #2365b1;
+}

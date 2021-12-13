@@ -1,0 +1,24 @@
+
+#chartdata {
+	float:right;
+}
+#datatable {
+    border:1px solid #000;
+}
+#datatable>tbody>tr>td {
+ vertical-align:top;
+ border-bottom:1px dotted #DDD;
+ margin:0;
+ overflow:hidden;
+}
+
+.field {
+ border:1px solid #CCC;
+ width:75px;
+}
+#chartarea {
+	margin-left:10px;
+}
+#chartcode {
+	margin-left:10px;
+}

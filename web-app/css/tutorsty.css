@@ -1,0 +1,73 @@
+k.lipsum{
+	margin-top:4px;
+	padding:6px;
+	font-size:10px;
+	color:#6e7072;
+	font-weight:bold;
+	font-family: Arial, Helvetica, sans-serif;
+}
+.copyrightnotice {
+}
+
+#mycustomscroll {
+/* Typical fixed height and fixed width example */
+	height:130px;
+overflow: auto;
+/* IE overflow fix, position must be relative or absolute*/
+position: relative;
+margin:0;
+padding:0;
+}
+#mycustomscroll-1 {
+/* Typical fixed height and fixed width example */
+	height:50px;
+overflow: auto;
+/* IE overflow fix, position must be relative or absolute*/
+position: relative;
+margin:0;
+padding:0;
+}
+#mycustomscroll a{
+	display:block;
+	padding:2px 5px;
+	font-size:11px;
+	color:#6e7072;
+	font-weight:bold;
+	text-decoration:none;
+}
+
+#mycustomscroll2 {
+/* Typical fixed height and fixed width example */
+
+overflow: auto;
+/* IE overflow fix, position must be relative or absolute*/
+position: relative;
+margin:0;
+padding:0;
+}
+
+
+.fixedwidth {
+/* a wide div is used for creating horizontal scrollbars for demonstration purposes */
+position: relative;
+padding: 0px;
+}
+
+#mycustomscroll-2 {
+/* Typical fixed height and fixed width example */
+	height:60px;
+overflow: auto;
+/* IE overflow fix, position must be relative or absolute*/
+position: relative;
+margin:13px 10px 0px 16px;
+}
+
+#mycustomscroll-2 a{
+	display:block;
+	padding:2px 5px;
+	font-size:11px;
+	color:#6e7072;
+	font-weight:bold;
+	text-decoration:none;
+}
+

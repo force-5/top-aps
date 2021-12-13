@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process xmlns="http://drools.org/drools-5.0/process"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+         xs:schemaLocation="http://drools.org/drools-5.0/process drools-processes-5.0.xsd"
+         type="RuleFlow" name="Revoke Request Workflow" id="com.force5solutions.care.workflow.role-revoke-request"
+         package-name="com.force5solutions.care.workflow">
+
+    <header>
+        <imports>
+            <import name="com.force5solutions.care.workflow.ApsWorkflowTaskService"/>
+            <import name="com.force5solutions.care.aps.Entitlement"/>
+            <import name="java.util.Arrays"/>
+            <import name="com.force5solutions.care.UtilService"/>
+        </imports>
+        <variables>
+            <variable name="responseElements">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashMap"/>
+            </variable>
+            <variable name="workflowType">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType"
+                      className="com.force5solutions.care.workflow.ApsWorkflowType"/>
+            </variable>
+            <variable name="workerEntitlementRoleId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="workflowTaskTemplate">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="revocationWorkflowTaskTemplate">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="effectiveStartDate">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.Date"/>
+            </variable>
+            <variable name="entitlementIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="entitlementRoleIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="careCentralTaskId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="droolsSessionId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="workflowGuid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="actorSlid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="message">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="entitlementThatRequireApprovalIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+        </variables>
+    </header>
+
+    <nodes>
+        <actionNode id="4" name="Revoked Access" x="1014" y="589" width="176" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "CONFIRM", "accessJustification":"Access Revoked by APS Application"]);
+            </action>
+        </actionNode>
+        <forEach id="15" name="Pending Revocation by Entitlement Role Gatekeeper" x="1407" y="369" width="353" height="76"
+                 variableName="entitlementRoleId" collectionExpression="entitlementRoleIds">
+            <nodes>
+                <humanTask id="1" name="Get Gatekeepers Approval" x="34" y="19" width="267" height="43">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>REVOKE_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="entitlementRoleId" to="entitlementRoleId"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="in" from="workflowTaskTemplate" to="workflowTaskTemplate"/>
+                    <mapping type="in" from="effectiveStartDate" to="effectiveStartDate"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Gatekeeper Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Gatekeeper Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <join id="44" name="Gatekeeper Approval completed" x="867" y="657" width="190" height="28"
+              type="2"/>
+        <split id="34" name="Is Approved?" x="964" y="672" width="208" height="37" type="2">
+            <constraints>
+                <constraint toNodeId="32" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{15,47,42,48})), "REJECT"));
+                </constraint>
+                <constraint toNodeId="5" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <actionNode id="5" name="Rejected Access" x="1273" y="814" width="125" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"REJECT", "accessJustification":"Revoke Rejected by APS Application"]);
+            </action>
+        </actionNode>
+        <actionNode id="32" name="Get Entitlements for revoking access" x="775" y="775" width="296" height="40">
+            <action type="expression" dialect="mvel">context.setVariable("entitlementIds", UtilService.getEntitlementsToRevokeAccess(workerEntitlementRoleId));
+            </action>
+        </actionNode>
+        <end id="17" name="End" x="1298" y="969" width="80" height="40"/>
+        <forEach id="8" name="Entitlement Revoke Request" x="231" y="194" width="551" height="276"
+                 variableName="entitlementId" collectionExpression="entitlementIds">
+            <nodes>
+                <split id="5" name="Is Origin Picture Perfect Feed??" x="346" y="28" width="177" height="40" type="2">
+                    <constraints>
+                        <constraint toNodeId="11" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                                    dialect="java">return true;
+                        </constraint>
+                        <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                                    dialect="java">return
+                            Entitlement.isEntitlementOriginatedFromTimFeed(entitlementId);
+                        </constraint>
+                    </constraints>
+                </split>
+                <humanTask id="6" name="TIM Request" x="300" y="111" width="134" height="40">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>TIM_SYSTEM_TASK_TEMPLATE</value>
+                        </parameter>
+                        <parameter name="actorSlid">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>TIM System</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">System.out.println("Entered TIM Revoke Request Node");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">System.out.println("Exiting TIM Revoke Request Node");
+                        </action>
+                    </onExit>
+                </humanTask>
+                <join id="10" name="Entitlements Revoked" x="179" y="205" width="188" height="52" type="2"/>
+                <humanTask id="11" name="Entitlement Revoke Request" x="10" y="27" width="223" height="40">
+                    <work name="APS Workflow Task">
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="in" from="revocationWorkflowTaskTemplate" to="revocationWorkflowTaskTemplate"/>
+                    <mapping type="in" from="effectiveStartDate" to="effectiveStartDate"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">System.out.println("Entered entitlement Revocation Request");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">System.out.println("Exiting entitlement Revocation Request");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+                <connection from="5" to="6"/>
+                <connection from="6" to="10"/>
+                <connection from="11" to="10"/>
+                <connection from="5" to="11"/>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="5" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="10" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <actionNode id="56" name="Send e-mail to provisioners" x="1328" y="1719" width="162" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.sendEmailToProvisioners(workerEntitlementRoleId, workflowGuid, revocationWorkflowTaskTemplate);
+            </action>
+        </actionNode>
+        <start id="9" name="Start" x="762" y="16" width="80" height="40"/>
+        <join id="27" name="Revocation Workflow completion notification" x="867" y="657" width="190" height="28"
+              type="2"/>
+        <split id="10" name="Has Entitlements To Be Revoked?" x="676" y="110" width="264" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="56" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (entitlementIds.size() > 0);
+                </constraint>
+                <constraint toNodeId="11" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <split id="41" name="Has Entitlement Roles That Require Approval?" x="676" y="110" width="264" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="46" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (entitlementRoleIds.size() > 0);
+                </constraint>
+                <constraint toNodeId="42" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <forEach id="47" name="Pending Revocation by Entitlement Role Gatekeeper" x="394" y="376" width="316" height="76"
+                 variableName="entitlementRoleId" collectionExpression="entitlementRoleIds">
+            <nodes>
+                <humanTask id="1" name="Pending Revocation by Entitlement Role Gatekeepers" x="36" y="25" width="236"
+                           height="40">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>REVOKE_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="entitlementRoleId" to="entitlementRoleId"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="in" from="workflowTaskTemplate" to="workflowTaskTemplate"/>
+                    <mapping type="in" from="effectiveStartDate" to="effectiveStartDate"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Role Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Role Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <split id="46" name="Start Gatekeepers Approvals" x="256" y="218" width="208" height="50" type="1"/>
+        <split id="45" name="Has Entitlements That Require Approval?" x="908" y="108" width="313" height="42" type="2">
+            <constraints>
+                <constraint toNodeId="41" toType="DROOLS_DEFAULT" name="yes" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="15" toType="DROOLS_DEFAULT" name="no" priority="1" type="code" dialect="java">
+                    return (entitlementThatRequireApprovalIds.isEmpty());
+                </constraint>
+            </constraints>
+        </split>
+        <forEach id="42" name="Pending Revocation by Entitlement Gatekeeper" x="879" y="373" width="372" height="75"
+                 variableName="entitlementId" collectionExpression="entitlementThatRequireApprovalIds">
+            <nodes>
+                <humanTask id="1" name="Pending Revocation by Entitlement Gatekeepers" x="30" y="27" width="301"
+                           height="39">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>REVOKE_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <forEach id="48" name="Pending Revocation by Entitlement Gatekeeper" x="879" y="373" width="372" height="75"
+                 variableName="entitlementId" collectionExpression="entitlementThatRequireApprovalIds">
+            <nodes>
+                <humanTask id="1" name="Pending Revocation by Entitlement Gatekeepers" x="30" y="27" width="301"
+                           height="39">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>REVOKE_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <join id="49" name="Gatekeepers approval completed" x="281" y="571" width="195" height="70" type="1"/>
+        <humanTask id="26" name="Initial Task" x="175" y="72" width="109" height="40">
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>INITIAL_TASK_TEMPLATE</value>
+                </parameter>
+                <parameter name="taskStatus">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>COMPLETE</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+            <mapping type="in" from="message" to="message"/>
+        </humanTask>
+        <join id="11" name="Entitlements Revocation Complete" x="815" y="257" width="283" height="40" type="2"/>
+        <split id="12" name="Is Successful?" x="858" y="424" width="146" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="13" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="51" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{8})), "FAILURE"));
+                </constraint>
+            </constraints>
+        </split>
+        <split id="51" name="Is Successful?" x="858" y="424" width="146" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="52" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="4" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{8})), "REJECT"));
+                </constraint>
+            </constraints>
+        </split>
+        <actionNode id="13" name="Error" x="790" y="594" width="80" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "FAILURE", "accessJustification":"Some Error while access revocation in APS Application"]);
+            </action>
+        </actionNode>
+        <actionNode id="52" name="Error" x="790" y="594" width="80" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "REJECT", "accessJustification":"Revoke Rejected by APS Application"]);
+            </action>
+        </actionNode>
+        <end id="53" name="End" x="921" y="791" width="80" height="40"/>
+        <end id="14" name="End" x="921" y="791" width="80" height="40"/>
+    </nodes>
+
+    <connections>
+        <connection from="12" to="13"/>
+        <connection from="10" to="56"/>
+        <connection from="56" to="8"/>
+        <connection from="13" to="27"/>
+        <connection from="4" to="27"/>
+        <connection from="26" to="45"/>
+        <connection from="45" to="41"/>
+        <connection from="45" to="15"/>
+        <connection from="41" to="42"/>
+        <connection from="41" to="46"/>
+        <connection from="46" to="47"/>
+        <connection from="46" to="48"/>
+        <connection from="47" to="49"/>
+        <connection from="48" to="49"/>
+        <connection from="49" to="44"/>
+        <connection from="42" to="44"/>
+        <connection from="15" to="44"/>
+        <connection from="44" to="34"/>
+        <connection from="34" to="32"/>
+        <connection from="34" to="5"/>
+        <connection from="5" to="17"/>
+        <connection from="32" to="10"/>
+        <connection from="9" to="26"/>
+        <connection from="10" to="11"/>
+        <connection from="8" to="11"/>
+        <connection from="11" to="12"/>
+        <connection from="27" to="14"/>
+        <connection from="12" to="51"/>
+        <connection from="51" to="4"/>
+        <connection from="51" to="52"/>
+        <connection from="52" to="53"/>
+    </connections>
+
+</process>

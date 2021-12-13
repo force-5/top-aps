@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process xmlns="http://drools.org/drools-5.0/process"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+         xs:schemaLocation="http://drools.org/drools-5.0/process drools-processes-5.0.xsd"
+         type="RuleFlow" name="Terminate Request Workflow" id="com.force5solutions.care.workflow.terminate-request"
+         package-name="com.force5solutions.care.workflow">
+
+    <header>
+        <imports>
+            <import name="com.force5solutions.care.workflow.ApsWorkflowTaskService"/>
+            <import name="java.util.Arrays"/>
+        </imports>
+        <variables>
+            <variable name="responseElements">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashMap"/>
+            </variable>
+            <variable name="workflowType">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType"
+                      className="com.force5solutions.care.workflow.ApsWorkflowType"/>
+            </variable>
+            <variable name="hasTimEntitlements">
+                <type name="org.drools.process.core.datatype.impl.type.BooleanDataType"/>
+            </variable>
+            <variable name="workerEntitlementRoleId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="entitlementIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="careCentralTaskId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="droolsSessionId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="workflowGuid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="actorSlid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+        </variables>
+    </header>
+
+    <nodes>
+        <start id="1" name="Start" x="594" y="30" width="80" height="40"/>
+        <split id="2" name="Has Entitlements?" x="287" y="211" width="177" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="4" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="3" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (entitlementIds.size()>0);
+                </constraint>
+            </constraints>
+        </split>
+        <forEach id="3" name="Entitlement Terminate Request" x="162" y="247" width="250" height="87"
+                 variableName="entitlementId" collectionExpression="entitlementIds">
+            <nodes>
+                <humanTask id="1" name="Entitlement Terminate Request" x="61" y="315" width="267" height="40">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>TERMINATE_CONFIRM_BY_PROVISIONER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("Entered entitlement Termination Request");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("Exiting entitlement Termination Request");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <join id="4" name="Terminated Access From Manual Entitlements" x="212" y="432" width="336" height="40"
+              type="2"/>
+        <humanTask id="5" name="TIM Request" x="971" y="320" width="152" height="40">
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>TIM_SYSTEM_TASK_TEMPLATE</value>
+                </parameter>
+                <parameter name="actorSlid">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>TIM System</value>
+                </parameter>
+
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+            <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+            <mapping type="out" from="responseElements" to="responseElements"/>
+            <onEntry>
+                <action type="expression" dialect="java">System.out.println("Entered TIM Terminate Request Node");
+                </action>
+            </onEntry>
+            <onExit>
+                <action type="expression" dialect="java">System.out.println("Exiting TIM Terminate Request Node");
+                </action>
+            </onExit>
+        </humanTask>
+        <actionNode id="6" name="Send Terminated Response to TOP Central" x="700" y="597" width="346" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "SUCCESS",
+                "accessJustification":"Access Terminated by APS Application"]);
+            </action>
+        </actionNode>
+        <end id="7" name="End" x="832" y="669" width="80" height="40"/>
+        <split id="8" name="Send Termination Request for Manual Entitlements And TIM" x="408" y="114" width="450"
+               height="40" type="1"/>
+        <split id="9" name="Has TIM Entitlements?" x="802" y="216" width="192" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="11" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="5" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (hasTimEntitlements);
+                </constraint>
+            </constraints>
+        </split>
+        <join id="10" name="Terminated Access" x="582" y="433" width="150" height="40" type="1"/>
+        <join id="11" name="Terminated Access From TIM" x="779" y="432" width="223" height="40" type="2"/>
+        <split id="12" name="Is Successful?" x="585" y="513" width="147" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="13" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid,
+                    (Arrays.asList(new Object[]{3,10})), "FAILURE"));
+                </constraint>
+            </constraints>
+        </split>
+        <actionNode id="13" name="Error" x="478" y="599" width="80" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "FAILURE",
+                "accessJustification":"Some Error while Terminating Employee in APS Application"]);
+            </action>
+        </actionNode>
+        <end id="14" name="End" x="479" y="670" width="80" height="40"/>
+        <humanTask id="26" name="Initial Task" x="175" y="72" width="109" height="40">
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>INITIAL_TASK_TEMPLATE</value>
+                </parameter>
+                <parameter name="taskStatus">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>COMPLETE</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+        </humanTask>
+    </nodes>
+
+    <connections>
+        <connection from="8" to="2"/>
+        <connection from="2" to="3"/>
+        <connection from="2" to="4"/>
+        <connection from="3" to="4"/>
+        <connection from="9" to="5"/>
+        <connection from="12" to="6"/>
+        <connection from="6" to="7"/>
+        <connection from="1" to="26"/>
+        <connection from="26" to="8"/>
+        <connection from="8" to="9"/>
+        <connection from="4" to="10"/>
+        <connection from="11" to="10"/>
+        <connection from="5" to="11"/>
+        <connection from="9" to="11"/>
+        <connection from="10" to="12"/>
+        <connection from="12" to="13"/>
+        <connection from="13" to="14"/>
+    </connections>
+
+</process>

@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process xmlns="http://drools.org/drools-5.0/process"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+         xs:schemaLocation="http://drools.org/drools-5.0/process drools-processes-5.0.xsd"
+         type="RuleFlow" name="Access Request Workflow" id="com.force5solutions.care.workflow.role-access-request"
+         package-name="com.force5solutions.care.workflow">
+
+    <header>
+        <imports>
+            <import name="com.force5solutions.care.workflow.ApsWorkflowTaskService"/>
+            <import name="com.force5solutions.care.aps.Entitlement"/>
+            <import name="com.force5solutions.care.UtilService"/>
+            <import name="java.util.Arrays"/>
+        </imports>
+        <variables>
+            <variable name="responseElements">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashMap"/>
+            </variable>
+            <variable name="workflowType">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType"
+                      className="com.force5solutions.care.workflow.ApsWorkflowType"/>
+            </variable>
+            <variable name="entitlementRoleIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="entitlementThatRequireApprovalIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="workerEntitlementRoleId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="entitlementIds">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet"/>
+            </variable>
+            <variable name="careCentralTaskId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="droolsSessionId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="workflowGuid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="actorSlid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+        </variables>
+    </header>
+
+    <nodes>
+        <join id="34" name="Access Provisioned on All Entitlements" x="1387" y="1585" width="284" height="40" type="2" />
+        <actionNode id="35" name="Error In TIM" x="1048" y="1671" width="185" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"FAILURE", "accessJustification":"Some error while processing access request in TIM"]);
+            </action>
+        </actionNode>
+        <start id="1" name="Start" x="1094" y="-2" width="48" height="68" />
+        <actionNode id="32" name="Get Entitlements for providing access" x="1195" y="913" width="296" height="40" >
+            <action type="expression" dialect="mvel">context.setVariable("entitlementIds", UtilService.getEntitlementsToProvideAccess(workerEntitlementRoleId));
+            </action>
+        </actionNode>
+        <forEach id="2" name="Pending Approval by Entitlement Role Gatekeeper" x="789" y="478" width="316" height="76" variableName="entitlementRoleId" collectionExpression="entitlementRoleIds" >
+            <nodes>
+                <humanTask id="1" name="Pending Approval by Entitlement Role Gatekeepers" x="36" y="25" width="236" height="40" >
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>ACCESS_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="entitlementRoleId" to="entitlementRoleId"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Role Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Role Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <split id="33" name="Has Entitlements For Requesting Access?" x="1441" y="1011" width="314" height="40" type="2" >
+            <constraints>
+                <constraint toNodeId="34" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                            dialect="java">return true;
+                </constraint>
+                <constraint toNodeId="51" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                            dialect="java">return (entitlementIds.size() > 0);
+                </constraint>
+            </constraints>
+        </split>
+        <actionNode id="4" name="Approved Access" x="1328" y="1719" width="162" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"APPROVE", "accessJustification":"Access Approved by APS Application"]);
+            </action>
+        </actionNode>
+        <actionNode id="5" name="Rejected Access" x="1776" y="949" width="125" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"REJECT", "accessJustification":"Access Rejected by APS Application"]);
+            </action>
+        </actionNode>
+        <actionNode id="42" name="Rejected Access" x="1776" y="949" width="125" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"REJECT", "accessJustification":"Access Rejected by APS Application"]);
+            </action>
+        </actionNode>
+        <end id="36" name="End" x="1118" y="1852" width="80" height="40" />
+        <end id="43" name="End" x="1118" y="1852" width="80" height="40" />
+        <split id="37" name="Is Successful?" x="1243" y="1499" width="80" height="40" type="2" >
+            <constraints>
+                <constraint toNodeId="46" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{8})), "FAILURE"));
+                </constraint>
+                <constraint toNodeId="35" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <split id="46" name="Is approved by all provisioners?" x="1243" y="1499" width="80" height="40" type="2" >
+            <constraints>
+                <constraint toNodeId="34" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{8})), "REJECT"));
+                </constraint>
+                <constraint toNodeId="42" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <forEach id="8" name="Pending Approval from Entitlement Provisioner" x="548" y="1074" width="644" height="277" variableName="entitlementId" collectionExpression="entitlementIds" >
+            <nodes>
+                <split id="5" name="Is Origin Picture Perfect Feed??" x="243" y="28" width="177" height="40" type="2">
+                    <constraints>
+                        <constraint toNodeId="11" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                                    dialect="java">return true;
+                        </constraint>
+                        <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                                    dialect="java">return Entitlement.isEntitlementOriginatedFromTimFeed(entitlementId);
+                        </constraint>
+                    </constraints>
+                </split>
+                <humanTask id="6" name="TIM Request" x="396" y="111" width="229" height="40">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>TIM_SYSTEM_TASK_TEMPLATE</value>
+                        </parameter>
+                        <parameter name="actorSlid">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>TIM System</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("Entered TIM Request Node");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("Exiting TIM Request Node");
+                        </action>
+                    </onExit>
+                </humanTask>
+                <join id="10" name="Entitlements Granted" x="245" y="206" width="188" height="52" type="2"/>
+                <humanTask id="11" name="Entitlement Provision Request" x="19" y="118" width="283" height="33">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>ACCESS_CONFIRM_BY_PROVISIONER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("Entered Entitlement Provision Request");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("Exiting Entitlement Provision Request");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+                <connection from="5" to="6"/>
+                <connection from="6" to="10"/>
+                <connection from="11" to="10"/>
+                <connection from="5" to="11"/>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="5" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="10" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <actionNode id="51" name="Send e-mail to provisioners" x="1328" y="1719" width="162" height="40" >
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.sendEmailToProvisioners(workerEntitlementRoleId, workflowGuid);
+            </action>
+        </actionNode>
+        <forEach id="9" name="Pending Approval by Entitlement Gatekeeper" x="261" y="470" width="372" height="75" variableName="entitlementId" collectionExpression="entitlementThatRequireApprovalIds" >
+            <nodes>
+                <humanTask id="1" name="Pending Approval by Entitlement Gatekeepers" x="36" y="23" width="301"
+                           height="39">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>ACCESS_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <join id="11" name="Has Gatekeepers approval?" x="751" y="699" width="195" height="70" type="1" />
+        <humanTask id="41" name="Gatekeeper Rejection Email" x="1681" y="1123" width="320" height="33" >
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>GATEKEEPER_REJECTION_NOTIFICATION_EMAIL_APS_SYSTEM_TASK</value>
+                </parameter>
+                <parameter name="taskStatus">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>COMPLETE</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+        </humanTask>
+        <split id="12" name="Has Entitlement Roles That Require Approval?" x="1107" y="283" width="321" height="50" type="2" >
+            <constraints>
+                <constraint toNodeId="23" toType="DROOLS_DEFAULT" name="yes" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="24" toType="DROOLS_DEFAULT" name="no" priority="1" type="code" dialect="java">
+                    return (entitlementRoleIds.isEmpty());
+                </constraint>
+            </constraints>
+        </split>
+        <split id="13" name="Is Approved?" x="1556" y="806" width="208" height="37" type="2" >
+            <constraints>
+                <constraint toNodeId="32" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code" dialect="java">
+                    return (!ApsWorkflowTaskService.doesExistApsWorkflowTaskWithResponse(workflowGuid, (Arrays.asList(new Object[]{9,2,24, 15})), "REJECT"));
+                </constraint>
+                <constraint toNodeId="5" toType="DROOLS_DEFAULT" name="no" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+            </constraints>
+        </split>
+        <split id="14" name="Has Entitlements That Require Approval?" x="1100" y="181" width="313" height="42" type="2" >
+            <constraints>
+                <constraint toNodeId="12" toType="DROOLS_DEFAULT" name="yes" priority="2" type="code" dialect="java">
+                    return true;
+                </constraint>
+                <constraint toNodeId="15" toType="DROOLS_DEFAULT" name="no" priority="1" type="code" dialect="java">
+                    return (entitlementThatRequireApprovalIds.isEmpty());
+                </constraint>
+            </constraints>
+        </split>
+        <forEach id="15" name="Pending Approval by Entitlement Role Gatekeeper" x="1682" y="501" width="353" height="76" variableName="entitlementRoleId" collectionExpression="entitlementRoleIds" >
+            <nodes>
+                <humanTask id="1" name="Get Gatekeepers Approval" x="34" y="19" width="267" height="43">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>ACCESS_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="entitlementRoleId" to="entitlementRoleId"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Role Gatekeeper Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Role Gatekeeper Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <end id="17" name="End" x="1830" y="1846" width="80" height="40" />
+        <end id="16" name="End" x="1386" y="1849" width="80" height="40" />
+        <split id="23" name="Start Gatekeepers Approvals" x="858" y="382" width="208" height="50" type="1" />
+        <forEach id="24" name="Pending Approval by Entitlement Gatekeeper" x="1204" y="478" width="372" height="75" variableName="entitlementId" collectionExpression="entitlementThatRequireApprovalIds" >
+            <nodes>
+                <humanTask id="1" name="Pending Approval by Entitlement Gatekeepers" x="30" y="27" width="301"
+                           height="39">
+                    <work name="APS Workflow Task">
+                        <parameter name="workflowTaskTemplate">
+                            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                            <value>ACCESS_APPROVAL_BY_GATEKEEPER</value>
+                        </parameter>
+                    </work>
+                    <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+                    <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+                    <mapping type="in" from="entitlementId" to="entitlementId"/>
+                    <mapping type="in" from="workflowType" to="workflowType"/>
+                    <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+                    <mapping type="out" from="responseElements" to="responseElements"/>
+                    <onEntry>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Entered Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onEntry>
+                    <onExit>
+                        <action type="expression" dialect="java">
+                            System.out.println("********* Exiting Business Unit Human Task for Entitlement Gatekeepers Approval...");
+                        </action>
+                    </onExit>
+                </humanTask>
+            </nodes>
+            <connections>
+            </connections>
+            <in-ports>
+                <in-port type="DROOLS_DEFAULT" nodeId="1" nodeInType="DROOLS_DEFAULT"/>
+            </in-ports>
+            <out-ports>
+                <out-port type="DROOLS_DEFAULT" nodeId="1" nodeOutType="DROOLS_DEFAULT"/>
+            </out-ports>
+        </forEach>
+        <humanTask id="26" name="Initial Task" x="1067" y="85" width="109" height="40" >
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>INITIAL_TASK_TEMPLATE</value>
+                </parameter>
+                <parameter name="taskStatus">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>COMPLETE</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+        </humanTask>
+        <join id="31" name="Gatekeeper Response" x="1556" y="689" width="166" height="40" type="2" />
+    </nodes>
+
+    <connections>
+        <connection from="33" to="34" />
+        <connection from="37" to="46" />
+        <connection from="37" to="35" />
+        <connection from="46" to="42" />
+        <connection from="46" to="34" />
+        <connection from="42" to="43" />
+        <connection from="13" to="32" />
+        <connection from="23" to="2" />
+        <connection from="32" to="33" />
+        <connection from="34" to="4" />
+        <connection from="13" to="5" />
+        <connection from="35" to="36" />
+        <connection from="8" to="37" />
+        <connection from="33" to="51" />
+        <connection from="51" to="8" />
+        <connection from="23" to="9" />
+        <connection from="2" to="11" />
+        <connection from="9" to="11" />
+        <connection from="5" to="41" />
+        <connection from="14" to="12" />
+        <connection from="31" to="13" />
+        <connection from="26" to="14" />
+        <connection from="14" to="15" />
+        <connection from="41" to="17" />
+        <connection from="4" to="16" />
+        <connection from="12" to="23" />
+        <connection from="12" to="24" />
+        <connection from="1" to="26" />
+        <connection from="11" to="31" />
+        <connection from="24" to="31" />
+        <connection from="15" to="31" />
+    </connections>
+
+</process>

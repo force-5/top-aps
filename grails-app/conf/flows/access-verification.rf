@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process xmlns="http://drools.org/drools-5.0/process"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+         xs:schemaLocation="http://drools.org/drools-5.0/process drools-processes-5.0.xsd"
+         type="RuleFlow" name="Admin Access Verification Workflow"
+         id="com.force5solutions.care.workflow.access-verification"
+         package-name="com.force5solutions.care.workflow">
+
+    <header>
+          <imports>
+            <import name="com.force5solutions.care.workflow.ApsWorkflowTaskService"/>
+        </imports>
+        <variables>
+            <variable name="responseElements">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashMap"/>
+            </variable>
+            <variable name="workflowType">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType"
+                      className="com.force5solutions.care.workflow.ApsWorkflowType"/>
+            </variable>
+            <variable name="workerId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="droolsSessionId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+            <variable name="workflowGuid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="actorSlid">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+            </variable>
+            <variable name="careCentralTaskId">
+                <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long"/>
+            </variable>
+        </variables>
+    </header>
+
+    <nodes>
+        <start id="1" name="Start" x="193" y="2" width="80" height="40"/>
+        <humanTask id="18" name="Get confirmation from Admin" x="114" y="152" width="236" height="40">
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>APS_ACCESS_VERIFICATION</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerId" to="workerId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+            <mapping type="out" from="responseElements" to="responseElements"/>
+        </humanTask>
+        <split id="19" name="Is Confirmed?" x="890" y="880" width="314" height="40" type="2">
+            <constraints>
+                <constraint toNodeId="22" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                            dialect="java">return ("REVOKE ALL".equals(responseElements.get("userAction")));
+                </constraint>
+                <constraint toNodeId="21" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                            dialect="java">return ("CONFIRM".equals(responseElements.get("userAction")));
+                </constraint>
+                <constraint toNodeId="24" toType="DROOLS_DEFAULT" name="no" priority="3" type="code"
+                            dialect="java">return ("AUTO CONFIRM".equals(responseElements.get("userAction")));
+                </constraint>
+            </constraints>
+        </split>
+        <actionNode id="21" name="Confirmed Access Verification" x="1014" y="589" width="176" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "CONFIRM", "accessJustification":"Access Verification confirmed by APS Admin"]);
+            </action>
+        </actionNode>
+        <actionNode id="22" name="Revoked All" x="1014" y="589" width="176" height="40">
+            <action type="expression" dialect="mvel">
+                ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "REVOKE ALL", "accessJustification":"Revoke All initiated by APS Admin"]);
+            </action>
+        </actionNode>
+
+        <actionNode id="24" name="Auto-confirm Access Verification" x="1014" y="589" width="176" height="40">
+                <action type="expression" dialect="mvel">
+                    ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId,["userAction" : "AUTO CONFIRM", "accessJustification":"Auto-confirm by APS System"]);
+                </action>
+        </actionNode>
+        <end id="23" name="End" x="113" y="375" width="80" height="40"/>
+        <end id="25" name="End" x="113" y="375" width="80" height="40"/>
+        <end id="27" name="End" x="113" y="375" width="80" height="40"/>
+        <humanTask id="26" name="Initial Task" x="175" y="72" width="109" height="40">
+            <work name="APS Workflow Task">
+                <parameter name="workflowTaskTemplate">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>INITIAL_TASK_TEMPLATE</value>
+                </parameter>
+                <parameter name="taskStatus">
+                    <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                    <value>COMPLETE</value>
+                </parameter>
+            </work>
+            <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+            <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+            <mapping type="in" from="workerId" to="workerId"/>
+            <mapping type="in" from="workflowType" to="workflowType"/>
+        </humanTask>
+    </nodes>
+
+    <connections>
+        <connection from="1" to="26"/>
+        <connection from="26" to="18"/>
+        <connection from="18" to="19"/>
+        <connection from="19" to="21"/>
+        <connection from="19" to="22"/>
+        <connection from="19" to="24"/>
+        <connection from="21" to="23"/>
+        <connection from="22" to="25"/>
+        <connection from="24" to="27"/>
+    </connections>
+
+</process>

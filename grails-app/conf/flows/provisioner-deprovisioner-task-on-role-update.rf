@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<process xmlns="http://drools.org/drools-5.0/process"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+         xs:schemaLocation="http://drools.org/drools-5.0/process drools-processes-5.0.xsd"
+         type="RuleFlow" name="Access Request Workflow" id="com.force5solutions.care.workflow.provisioner-deprovisioner-task-on-role-update" package-name="com.force5solutions.care.workflow" >
+
+  <header>
+    <imports>
+      <import name="com.force5solutions.care.workflow.ApsWorkflowTaskService" />
+      <import name="com.force5solutions.care.aps.Entitlement" />
+      <import name="com.force5solutions.care.workflow.ProvisionerDeprovisionerTaskOnRoleUpdate" />
+      <import name="com.force5solutions.care.UtilService" />
+      <import name="java.util.Arrays" />
+    </imports>
+    <variables>
+      <variable name="responseElements" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashMap" />
+      </variable>
+      <variable name="workflowType" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="com.force5solutions.care.workflow.ApsWorkflowType" />
+      </variable>
+      <variable name="provisionerDeprovisionerTaskOnRoleUpdateIds" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.HashSet" />
+      </variable>
+      <variable name="workerEntitlementRoleId" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long" />
+      </variable>
+      <variable name="entitlementId" >
+          <type name="org.drools.process.core.datatype.impl.type.StringDataType" />
+      </variable>
+      <variable name="careCentralTaskId" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long" />
+      </variable>
+      <variable name="droolsSessionId" >
+        <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.lang.Long" />
+      </variable>
+      <variable name="workflowGuid" >
+        <type name="org.drools.process.core.datatype.impl.type.StringDataType" />
+      </variable>
+      <variable name="actorSlid" >
+        <type name="org.drools.process.core.datatype.impl.type.StringDataType" />
+      </variable>
+      <variable name="revocationWorkflowTaskTemplate">
+            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+      </variable>
+      <variable name="provisionerDeprovisionerTaskOnRoleUpdateGuid">
+            <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+      </variable>
+      <variable name="effectiveStartDate">
+            <type name="org.drools.process.core.datatype.impl.type.ObjectDataType" className="java.util.Date"/>
+      </variable>
+    </variables>
+  </header>
+
+  <nodes>
+    <start id="1" name="Start" x="489" y="13" width="87" height="40" />
+    <end id="2" name="End" x="487" y="551" width="54" height="62" />
+    <end id="3" name="End" x="487" y="551" width="54" height="62" />
+    <humanTask id="4" name="Initial Task" x="437" y="112" width="150" height="33" >
+      <work name="APS Workflow Task">
+            <parameter name="workflowTaskTemplate">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                <value>INITIAL_TASK_TEMPLATE</value>
+            </parameter>
+            <parameter name="taskStatus">
+                <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                <value>COMPLETE</value>
+            </parameter>
+      </work>
+      <mapping type="in" from="droolsSessionId" to="droolsSessionId" />
+      <mapping type="in" from="workflowGuid" to="workflowGuid" />
+      <mapping type="in" from="workflowType" to="workflowType" />
+      <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId" />
+      <mapping type="in" from="provisionerDeprovisionerTaskOnRoleUpdateGuid" to="provisionerDeprovisionerTaskOnRoleUpdateGuid" />
+    </humanTask>
+    <actionNode id="6" name="Access Granted" x="388" y="448" width="245" height="54" >
+        <action type="expression" dialect="mvel" >ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"APPROVE", "accessJustification":"Access Approved by APS Application"]);</action>
+    </actionNode>
+    <actionNode id="9" name="Access Rejected" x="388" y="448" width="245" height="54" >
+        <action type="expression" dialect="mvel" >ApsWorkflowTaskService.createResponseForCareCentral(careCentralTaskId, ["userAction":"REJECT", "accessJustification":"Access Rejected by APS Application"]);</action>
+    </actionNode>
+
+    <forEach id="7" name="Provisioner Deprovisioner Task" x="283" y="199" width="457" height="199" variableName="provisionerDeprovisionerTaskOnRoleUpdateId" collectionExpression="provisionerDeprovisionerTaskOnRoleUpdateIds">
+      <nodes>
+          <actionNode id="32" name="Get Entitlement for revoking access" x="775" y="775" width="296" height="40">
+              <action type="expression" dialect="mvel">context.setVariable("entitlementId", ProvisionerDeprovisionerTaskOnRoleUpdate.getEntitlementId(provisionerDeprovisionerTaskOnRoleUpdateId));
+              </action>
+          </actionNode>
+          <split id="5" name="Is provisioner task?" x="243" y="28" width="177" height="40" type="2">
+              <constraints>
+                  <constraint toNodeId="11" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                              dialect="java">return true;
+                  </constraint>
+                  <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                              dialect="java">return ProvisionerDeprovisionerTaskOnRoleUpdate.isProvisionerTask(provisionerDeprovisionerTaskOnRoleUpdateId);
+                  </constraint>
+              </constraints>
+          </split>
+          <humanTask id="6" name="Entitlement Provision Request" x="396" y="111" width="229" height="40">
+              <work name="APS Workflow Task">
+                  <parameter name="workflowTaskTemplate">
+                      <type name="org.drools.process.core.datatype.impl.type.StringDataType"/>
+                      <value>ACCESS_CONFIRM_BY_PROVISIONER</value>
+                  </parameter>
+              </work>
+              <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+              <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+              <mapping type="in" from="entitlementId" to="entitlementId"/>
+              <mapping type="in" from="workflowType" to="workflowType"/>
+              <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+              <mapping type="in" from="provisionerDeprovisionerTaskOnRoleUpdateGuid" to="provisionerDeprovisionerTaskOnRoleUpdateGuid" />
+              <mapping type="out" from="responseElements" to="responseElements"/>
+              <onEntry>
+                  <action type="expression" dialect="java">
+                      System.out.println("Entered Entitlement Provision Request");
+                  </action>
+              </onEntry>
+              <onExit>
+                  <action type="expression" dialect="java">
+                      System.out.println("Exiting Entitlement Provision Request");
+                  </action>
+              </onExit>
+          </humanTask>
+          <join id="10" name="All requests completed" x="245" y="206" width="188" height="52" type="2"/>
+          <humanTask id="11" name="Entitlement De-Provision Request" x="19" y="118" width="283" height="33">
+              <work name="APS Workflow Task">
+              </work>
+              <mapping type="in" from="droolsSessionId" to="droolsSessionId"/>
+              <mapping type="in" from="workflowGuid" to="workflowGuid"/>
+              <mapping type="in" from="entitlementId" to="entitlementId"/>
+              <mapping type="in" from="workflowType" to="workflowType"/>
+              <mapping type="in" from="workerEntitlementRoleId" to="workerEntitlementRoleId"/>
+              <mapping type="in" from="revocationWorkflowTaskTemplate" to="revocationWorkflowTaskTemplate"/>
+              <mapping type="in" from="effectiveStartDate" to="effectiveStartDate"/>
+              <mapping type="in" from="provisionerDeprovisionerTaskOnRoleUpdateGuid" to="provisionerDeprovisionerTaskOnRoleUpdateGuid" />
+              <mapping type="out" from="responseElements" to="responseElements"/>
+              <onEntry>
+                  <action type="expression" dialect="java">System.out.println("Entered entitlement Revocation Request");
+                  </action>
+              </onEntry>
+              <onExit>
+                  <action type="expression" dialect="java">System.out.println("Exiting entitlement Revocation Request");
+                  </action>
+              </onExit>
+          </humanTask>
+      </nodes>
+      <connections>
+          <connection from="32" to="5"/>
+          <connection from="5" to="6"/>
+          <connection from="6" to="10"/>
+          <connection from="11" to="10"/>
+          <connection from="5" to="11"/>
+      </connections>
+      <in-ports>
+          <in-port type="DROOLS_DEFAULT" nodeId="32" nodeInType="DROOLS_DEFAULT"/>
+      </in-ports>
+      <out-ports>
+          <out-port type="DROOLS_DEFAULT" nodeId="10" nodeOutType="DROOLS_DEFAULT"/>
+      </out-ports>
+    </forEach>
+
+      <split id="8" name="Is Confirmed?" x="890" y="880" width="314" height="40" type="2">
+          <constraints>
+              <constraint toNodeId="9" toType="DROOLS_DEFAULT" name="no" priority="2" type="code"
+                          dialect="java">return ("REJECT".equals(responseElements.get("userAction")));
+              </constraint>
+              <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="1" type="code"
+                          dialect="java">return ("CONFIRM".equals(responseElements.get("userAction")));
+              </constraint>
+              <constraint toNodeId="6" toType="DROOLS_DEFAULT" name="yes" priority="3" type="code"
+                          dialect="java">return true;
+              </constraint>
+          </constraints>
+      </split>
+  </nodes>
+
+  <connections>
+    <connection from="6" to="2" />
+    <connection from="1" to="4" />
+    <connection from="7" to="8" />
+    <connection from="8" to="9" />
+    <connection from="9" to="3" />
+    <connection from="8" to="6" />
+    <connection from="4" to="7" />
+  </connections>
+
+</process>

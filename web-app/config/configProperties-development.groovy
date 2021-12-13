@@ -1,0 +1,98 @@
+rssFeedUrl = "http://www.forbes.com/news/index.xml"
+bccAlertRecipient = "care.force5+bcc@gmail.com"
+grails {
+    mail {
+        host = "localhost"
+        port = "25"
+        fromEmailAddress = "CARE Admin <admin@dev.aps.net>"
+        username = "username"
+        password = "password"
+        defaultEmail {
+            from = "CARE Admin <admin@dev.aps.net>"
+        }
+    }
+}
+addRoleWorkflow = "flows/add-role.rf"
+updateRoleWorkflow = "flows/update-role.rf"
+accessVerificationWorkflow = "flows/access-verification.rf"
+addEntitlementWorkflow = "flows/add-entitlement.rf"
+updateEntitlementWorkflow = "flows/update-entitlement.rf"
+accountPasswordChangeWorkflow = "flows/account-password-change.rf"
+roleAccessWorkflow = "flows/role-access-request.rf"
+roleAccessWorkflowForContractor = "flows/role-access-request-contractor.rf"
+roleRevokeWorkflow = "flows/role-revoke-request.rf"
+terminateWorkflow = "flows/terminate-request.rf"
+updateEntitlementFeedExceptionWorkflow = "flows/update-entitlement-feed-exception.rf"
+createEntitlementFeedExceptionWorkflow = "flows/create-entitlement-feed-exception.rf"
+provisionerDeprovisionerTasksOnRoleUpdateWorkflow = "flows/provisioner-deprovisioner-task-on-role-update.rf"
+timOwner = "timOwner"
+timRoleType = "Cyber"
+ppOwner = "ppOwner"
+ppPolicy = "Physical"
+ppOrigin = "Picture Perfect Feed"
+tim {
+    platformUrl = "iiop://tim.force5solutions.com:2809"
+    platformUser = "wasadmin"
+    platformPassword = "zaq12wsx"
+    itimUser = "itim manager"
+    itimPassword = "zaq12wsx"
+    defaultOrgId = "Erglobalid=00000000000000000000"
+    tenantId = "Force5"
+    ldapServerRoot = "dc=com"
+}
+timRawServlet {
+    url = "http://localhost:8080/"
+    username = "admin"
+    password = "care123"
+}
+careCentral {
+    webService {
+        username = "admin"
+        password = "admin"
+        url = "http://localhost:8080/care/services/careCentral"
+    }
+}
+sendEmail = "true"
+isEmployeeEditable = "false"
+emailDomain = "@gmail.com"
+checkRequestStatusCronTrigger = "0 0 0 1 1 ? 2050"
+createEntitlementsCronTrigger = "0 0 0 1 1 ? 2050"
+processTimTasksCronTrigger = "0 0 0 1 1 ? 2050"
+escalationTrigger = "0 0 0 1 1 ? 2050"
+propogateEntitlementCronTrigger = "0/5 * * * * ? *"
+propogateEntitlementRoleCronTrigger = "0/5 * * * * ? *"
+triggerProvisionerDeprovisionerTaskOnRoleUpdateCronTrigger = "0/30 * * * * ? *"
+workflowRequestCronTrigger = "0/5 * * * * ? *"
+workflowResponseCronTrigger = "0/5 * * * * ? *"
+autoConfirmGatekeeperRevocationResponseTimeOutCronTrigger = "0 0 0 1 1 ? 2050"
+autoCompleteGenericAndSharedEntitlementApsWorkflowTaskJobTrigger = "0/30 * * * * ? *"
+escalatedAccessVerificationTimeOutCronTrigger = "0 0 0 1 1 ? 2050"
+autoArchiveCompletedWorkflowTaskCronTrigger = "0 0 0 1 1 ? 2050"
+categoryAreReaderFileFeedServiceCronTrigger = "0 0 0 1 1 ? 2050"
+categoryWorkerFileFeedServiceCronTrigger = "0 0 0 1 1 ? 2050"
+accountPasswordChangeTrigger = "0 0 0 1 1 ? 2050"
+escalatedAccessVerificationWaitPeriodInHours = "8"
+gatekeeperAutoConfirmWaitPeriodFor7DaysRevocationInHours = "24"
+gatekeeperAutoConfirmWaitPeriodFor24HoursRevocationInHours = "2"
+autoArchiveCompletedWorkflowTaskDaysInterval = "30"
+superAdminSlids = "admin, topuser1"
+top {
+    activeDirectory {
+        simulate = "true"
+        domain = "f5lab.local"
+        ldapHost = "ldap://173.162.65.181"
+        searchBase = "dc=f5lab,dc=local"
+        securityAuthentication = "simple"
+    }
+}
+defaultSecurityGroup = "DEFAULT"
+defaultEntitlementRoleGatekeeperSecurityGroup = "GATEKEEPER-G1"
+outerCircleAccessLayer = "2"
+defaultSizeOfListView = "10"
+isInitialLoadOfEntitlementsFromFileFeedService = "false"
+runDatabaseFeedForCategoryAreaReader = "false"
+runDatabaseFeedForCategoryWorker = "false"
+sharedAccountEntitlementOwnerId = "1"
+sharedAccountEntitlementGatekeeperId = "1"
+accountPasswordChangeTimeoutPeriodInMonths = "9"
+annualResetDateForAccountPasswordChange = "10/08/2013"

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD JasperReport//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+
+<jasperReport name="entitlementRoleToEntitlements" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="20" bottomMargin="20">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String"/>
+	<parameter name="FOOTER_IMAGE_FILE" class="java.lang.String"/>
+	<field name="name" class="java.lang.String"/>
+	<field name="entitlementRoleNames" class="java.util.Collection"/>
+	<background>
+		<band/>
+	</background>
+	<title>
+		<band height="36">
+			<staticText>
+				<reportElement key="staticText-1" x="3" y="0" width="378" height="36"/>
+				<textElement textAlignment="Left">
+					<font size="24" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Entitlement Role to Entitlements]]></text>
+			</staticText>
+			<textField pattern="MM/dd/yyyy HH:mm:ss" hyperlinkType="None">
+				<reportElement x="435" y="16" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression class="java.util.Date"><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="24">
+			<staticText>
+				<reportElement key="staticText-2" x="3" y="0" width="198" height="23"/>
+				<textElement>
+					<font size="14" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Entitlement Role]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="staticText-3" x="214" y="0" width="198" height="23"/>
+				<textElement>
+					<font size="14" isBold="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Entitlements]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="18">
+			<textField isBlankWhenNull="false" hyperlinkType="None">
+				<reportElement key="textField-1" x="5" y="0" width="198" height="18"/>
+				<textElement/>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{name}]]></textFieldExpression>
+			</textField>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-1" x="214" y="0" width="321" height="14"/>
+				<dataSourceExpression><![CDATA[new JRBeanCollectionDataSource($F{entitlementRoleNames})]]></dataSourceExpression>
+				<subreportExpression class="java.lang.String"><![CDATA[$P{SUBREPORT_DIR} + "entitlementToEntitlementRolesSubReport.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="74">
+			<image hyperlinkType="None">
+				<reportElement key="image-1" x="190" y="0" width="180" height="72"/>
+				<graphicElement/>
+				<imageExpression class="java.lang.String"><![CDATA[$P{SUBREPORT_DIR} + "../images/"+$P{FOOTER_IMAGE_FILE}]]></imageExpression>
+			</image>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true" hyperlinkType="None">
+				<reportElement key="textField" x="480" y="43" width="55" height="18"/>
+				<textElement/>
+				<textFieldExpression class="java.lang.Integer"><![CDATA[$V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<lastPageFooter>
+		<band height="74">
+			<image hyperlinkType="None">
+				<reportElement key="image-1" x="190" y="0" width="180" height="72"/>
+				<graphicElement/>
+				<imageExpression class="java.lang.String"><![CDATA[$P{SUBREPORT_DIR} + "../images/"+$P{FOOTER_IMAGE_FILE}]]></imageExpression>
+			</image>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true" hyperlinkType="None">
+				<reportElement key="textField" x="480" y="44" width="55" height="18"/>
+				<textElement/>
+				<textFieldExpression class="java.lang.Integer"><![CDATA[$V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band height="50"/>
+	</summary>
+</jasperReport>
